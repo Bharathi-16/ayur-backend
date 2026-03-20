@@ -1,0 +1,26 @@
+# AyurParam AI — Dependencies
+# Install: pip install -r requirements.txt
+
+# ── Web Framework ──
+flask>=3.0
+flask-cors>=4.0
+
+# ── AI / ML (Stable for Intel Mac) ──
+torch==2.2.2
+transformers==4.48.3
+tokenizers==0.21.0
+numpy<2.0.0
+accelerate>=0.25
+
+# ── System Monitoring ──
+psutil>=5.9
+
+# ── Optional: for future RAG ──
+# chromadb>=0.4
+# sentence-transformers>=2.2
+# PyMuPDF>=1.23
+# python-docx>=1.0
+# langchain>=0.1
+
+# ── Production Server ──
+gunicorn>=21.2.0
