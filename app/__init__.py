@@ -13,9 +13,9 @@ def create_app():
     app.config['DATABASE'] = os.path.join(os.path.dirname(__file__), '..', 'data', 'ayurparam.db')
     app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB upload limit
 
-    # CORS configuration
-    # For production, we should restrict this to the frontend domain e.g. https://your-app.vercel.app
-    CORS(app, resources={r"/api/*": {"origins": "*"}})
+    # CORS configuration specifically for your Vercel frontend
+    CORS(app, resources={r"/api/*": {"origins": ["https://ayur-web.vercel.app", "http://localhost:3000"]}})
+
 
     # ── Database ──
     try:
