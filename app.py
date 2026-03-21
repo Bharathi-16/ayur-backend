@@ -3,7 +3,8 @@ AyurParam AI — Simple Developer Launcher
 Run: python run.py
 Web: http://localhost:8080
 """
-from app.main import app
+from app.app import app
+
 
 if __name__ == "__main__":
     print("\n" + "="*60)
