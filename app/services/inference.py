@@ -115,18 +115,18 @@ def _load_model_task():
         model_state["progress"] = 40
 
         # Device detection
-        # Device detection (Sync with user snippet)
         if torch.cuda.is_available():
             device = "cuda"
             dtype = torch.bfloat16
         elif platform.machine() == "arm64" and torch.backends.mps.is_available():
-            # MPS only works on Apple Silicon
             device = "mps"
             dtype = torch.float16
         else:
-            # CPU fallback: float32 avoids NaN errors on x86
+            # CPU fallback: Using float16 instead of float32 to save 50% RAM.
+            # Note: Some older CPUs might need float32 for stability, but float16 is required for memory limits.
             device = "cpu"
-            dtype = torch.float32
+            dtype = torch.float16
+
 
         model_state["device"] = device.upper()
         model_state["message"] = f"Loading model on {device.upper()} (this may take a minute)..."
