@@ -1,7 +1,7 @@
 # ============================================
 # AyurParam AI — Production Dockerfile
 # ============================================
-FROM python:3.11-slim
+FROM python:3.14-slim
 
 # Prevent interactive prompts during package install
 ENV PYTHONUNBUFFERED=1
@@ -18,11 +18,11 @@ WORKDIR /app
 # Install Python dependencies first (for Docker cache efficiency)
 COPY requirements.txt .
 
-# OPTIMIZATION: Railway typically does not offer GPUs on basic plans.
-# The default Linux PyTorch size is 2.8 GB because of bundled CUDA libraries.
-# We explicitly install the CPU version of PyTorch first. This reduces PyTorch size from 2.8 GB to 150 MB!
+# OPTIMIZATION: Railway/Render typically does not offer GPUs on basic plans.
+# The default Linux PyTorch size is several GB because of bundled CUDA libraries.
+# We explicitly install the CPU version of PyTorch first. This reduces size significantly!
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir torch==2.2.2 --index-url https://download.pytorch.org/whl/cpu && \
+    pip install --no-cache-dir torch==2.10.0 --index-url https://download.pytorch.org/whl/cpu && \
     pip install --no-cache-dir -r requirements.txt
 
 # Copy project files
@@ -37,3 +37,4 @@ RUN mkdir -p /app/data /app/logs
 # Railway dynamically assigns the PORT environment variable.
 
 CMD ["gunicorn", "--config", "gunicorn.conf.py", "main:app"]
+
