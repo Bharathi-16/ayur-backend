@@ -13,8 +13,15 @@ def create_app():
     app.config['DATABASE'] = os.path.join(os.path.dirname(__file__), '..', 'data', 'ayurparam.db')
     app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB upload limit
 
-    # CORS configuration specifically for your Vercel frontend
-    CORS(app, resources={r"/api/*": {"origins": ["https://ayur-web.vercel.app", "http://localhost:3000"]}})
+    # CORS configuration specifically for your Vercel frontend (Production + Previews)
+    CORS(app, resources={r"/api/*": {"origins": [
+        "https://ayur-web.vercel.app",
+        "https://ayur-web-trivineai-3445s-projects.vercel.app",
+        "https://ayur-web-git-main-trivineai-3445s-projects.vercel.app",
+        "https://ayur-nmplwpzpb-trivineai-3445s-projects.vercel.app",
+        "http://localhost:3000"
+    ]}})
+
 
 
     # ── Database ──
