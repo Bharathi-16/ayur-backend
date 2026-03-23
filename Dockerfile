@@ -34,6 +34,7 @@ COPY gunicorn.conf.py .
 RUN mkdir -p /app/data /app/logs
 
 # Railway dynamically assigns the PORT environment variable.
+EXPOSE 8080
 
 CMD ["gunicorn", "--config", "gunicorn.conf.py", "main:app"]
 

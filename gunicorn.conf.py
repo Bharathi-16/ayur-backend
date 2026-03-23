@@ -6,7 +6,7 @@ import multiprocessing
 import os
 
 # Server socket
-port = os.environ.get("PORT", "10000")
+port = os.environ.get("PORT", "8080")
 bind = f"0.0.0.0:{port}"
 
 
