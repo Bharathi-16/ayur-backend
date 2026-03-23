@@ -141,14 +141,22 @@ def _load_model_task():
         config = AutoConfig.from_pretrained(MODEL_ID, trust_remote_code=True)
         config.rope_scaling = None
 
-        print(f"[Inference] Downloading/loading {MODEL_ID} weights...")
+        # ── Disk Offloading Optimization ──
+        # This allows the model to map its weights to the disk instead of RAM.
+        # It prevents crashes but will make inference slower.
+        offload_dir = os.path.join(os.getcwd(), "offload")
+        os.makedirs(offload_dir, exist_ok=True)
+
+        print(f"[Inference] Downloading/loading {MODEL_ID} weights with Disk Offloading...")
         model = AutoModelForCausalLM.from_pretrained(
             MODEL_ID,
             config=config,
             torch_dtype=dtype,
             low_cpu_mem_usage=True,
             trust_remote_code=True,
-            device_map=device
+            device_map="auto",
+            offload_folder=offload_dir,
+            offload_state_dict=True
         )
         model.eval()
 
