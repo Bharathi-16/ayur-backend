@@ -27,7 +27,6 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 # Copy project files
 COPY app/ ./app/
-COPY templates/ ./templates/
 COPY main.py .
 COPY gunicorn.conf.py .
 
