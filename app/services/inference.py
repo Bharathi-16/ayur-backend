@@ -29,7 +29,7 @@ client = None
 _stop_event = threading.Event()
 
 # ── Default Config ──
-MODEL_ID = os.environ.get("MODEL_ID", "bharatgenai/AyurParam")
+MODEL_ID = os.environ.get("MODEL_ID", "microsoft/phi-2")
 HF_TOKEN = os.environ.get("HF_TOKEN")
 
 DEFAULT_CONFIG = {
@@ -172,16 +172,16 @@ def _load_model_task():
         offload_dir = os.path.join(os.getcwd(), "offload")
         os.makedirs(offload_dir, exist_ok=True)
 
-        print(f"[Inference] Downloading/loading {MODEL_ID} weights with Disk Offloading...")
+        print(f"[Inference] Downloading/loading {MODEL_ID} weights with User-Requested Optimization (4-bit + Auto)...")
+        # NOTE: load_in_4bit=True requires a bitsandbytes-compatible GPU (CUDA).
+        # On Railway (CPU), it will fallback to fp16/fp32 or throw an error if bitsandbytes is missing.
         model = AutoModelForCausalLM.from_pretrained(
             MODEL_ID,
-            config=config,
-            torch_dtype=dtype,
-            low_cpu_mem_usage=True,
-            trust_remote_code=True,
             device_map="auto",
-            offload_folder=offload_dir,
-            offload_state_dict=True
+            load_in_4bit=True,
+            torch_dtype=torch.float16,
+            trust_remote_code=True,
+            offload_folder=offload_dir
         )
         model.eval()
 
