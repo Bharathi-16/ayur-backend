@@ -8,6 +8,9 @@ import platform
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM, TextIteratorStreamer
 
+import os
+from huggingface_hub import InferenceClient
+
 # ── Model State (global singleton) ──
 model_state = {
     "loaded": False,
@@ -17,14 +20,17 @@ model_state = {
     "error": None,
     "device": None,
     "model_id": None,
+    "mode": os.environ.get("INFERENCE_MODE", "LOCAL").upper(), # LOCAL or API
 }
 
 tokenizer = None
 model = None
+client = None
 _stop_event = threading.Event()
 
 # ── Default Config ──
-MODEL_ID = "bharatgenai/AyurParam"
+MODEL_ID = os.environ.get("MODEL_ID", "bharatgenai/AyurParam")
+HF_TOKEN = os.environ.get("HF_TOKEN")
 
 DEFAULT_CONFIG = {
     "max_new_tokens": 150,
@@ -68,6 +74,7 @@ def get_status():
         "progress": model_state["progress"],
         "device": model_state["device"],
         "model_id": model_state["model_id"],
+        "mode": model_state["mode"],
     }
 
 
@@ -93,18 +100,36 @@ def reload_model():
 
 
 def _load_model_task():
-    global tokenizer, model
+    global tokenizer, model, client
     try:
-        import os
         import traceback
-        from transformers import AutoConfig
         
+        print(f"[Inference] Starting model load task (Mode: {model_state['mode']})...")
+        model_state["model_id"] = MODEL_ID
+        
+        # ── API MODE (Low Memory) ──
+        if model_state["mode"] == "API":
+            model_state["message"] = f"Connecting to Inference API for {MODEL_ID}..."
+            model_state["progress"] = 50
+            
+            if not HF_TOKEN:
+                print("[Inference] ⚠️ HF_TOKEN not found in env. Serverless inference may be limited.")
+            
+            client = InferenceClient(api_key=HF_TOKEN)
+            # Minimal check: we don't load weights, so it's "ready" immediately
+            model_state["loaded"] = True
+            model_state["loading"] = False
+            model_state["device"] = "REMOTE (HF-API)"
+            model_state["message"] = f"Ready — {MODEL_ID} via Inference API"
+            model_state["progress"] = 100
+            print(f"[Inference] ✅ API Mode Ready (Zero Local RAM used for weights)")
+            return
+
+        # ── LOCAL MODE (High Memory) ──
         os.environ["TOKENIZERS_PARALLELISM"] = "false"
-        print("[Inference] Starting model load task...")
         
         model_state["message"] = f"Loading tokenizer for {MODEL_ID}..."
         model_state["progress"] = 20
-        model_state["model_id"] = MODEL_ID
 
         tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, trust_remote_code=True)
         if tokenizer.pad_token is None:
@@ -212,6 +237,42 @@ def generate_stream(history, config=None, system_prompt=None):
     start_time = time.time()
 
     try:
+        # ── API MODE STREAMING ──
+        if model_state["mode"] == "API":
+            print(f"[Inference] Calling HF Inference API for {MODEL_ID}...")
+            
+            # Format history for chat completion
+            messages = [{"role": "system", "content": system_prompt or SYSTEM_PROMPT}]
+            for h in history[-10:]:
+                messages.append({"role": h["role"], "content": h["content"]})
+            
+            full_text = ""
+            token_count = 0
+            
+            for message in client.chat_completion(
+                model=MODEL_ID,
+                messages=messages,
+                max_tokens=int(merged_config.get("max_new_tokens", 150)),
+                temperature=float(merged_config.get("temperature", 0.6)),
+                top_p=float(merged_config.get("top_p", 0.85)),
+                stream=True,
+            ):
+                if _stop_event.is_set():
+                    yield f"data: {json.dumps({'stopped': True, 'full': full_text.strip()})}\n\n"
+                    return
+                
+                token = message.choices[0].delta.content
+                if token:
+                    full_text += token
+                    token_count += 1
+                    yield f"data: {json.dumps({'delta': token})}\n\n"
+
+            elapsed = time.time() - start_time
+            print(f"[Inference] API Call DONE. Total tokens: {token_count}")
+            yield f"data: {json.dumps({'done': True, 'full': full_text.strip(), 'token_count': token_count, 'latency_ms': int(elapsed * 1000)})}\n\n"
+            return
+
+        # ── LOCAL MODE STREAMING ──
         with torch.inference_mode():
             device = model.device
             inputs = tokenizer(prompt, return_tensors="pt").to(device)
