@@ -6,7 +6,7 @@ import time
 import threading
 import platform
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM, TextIteratorStreamer
+from transformers import AutoTokenizer, AutoModelForCausalLM, TextIteratorStreamer, AutoConfig
 
 import os
 from huggingface_hub import InferenceClient
